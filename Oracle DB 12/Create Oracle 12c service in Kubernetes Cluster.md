@@ -8,20 +8,18 @@ https://hub.docker.com/r/sath89/oracle-12c/
 - Create an Oracle Database cluster consisting of 2 replicas with container port set as 1521.
 
 ```
-kubectl run oradb --image=sath89/oracle-12c --replicas=2 --port=1521
+kubectl create deployment --image=sath89/oracle-12c oradb
 ```
 
-A replication controller called oradb gets created and a **selector (run=oradb)** to select Pods that comprise the replication controller replicas, and the number of replicas (2) get listed.
+A deployment called oradb gets created.
 
-The Pod label is also set to **run=oradb**. A **pod label has to be the same as a selector expression for the Pod to be managed by the replication controller**.
-
-- List the replication controllers.
+- List the deployments.
 
 ```
-kubectl get rc
+kubectl get deployments
 ```
 
-The oradb replication controller gets listed.
+The oradb deployment gets listed.
 
 - List the Pods.
 
@@ -29,7 +27,21 @@ The oradb replication controller gets listed.
 kubectl get pods
 ```
 
-Two pods (prefixed oradb) get listed for Oracle Database. Initially the Pods could be listed as not ready as indicated by the 0/1 in READY column.
+One pod (prefixed oradb) get listed for Oracle Database. Initially the Pod could be listed as not ready as indicated by the 0/1 in READY column.
+
+- Scale up the deployment.
+
+```
+kubectl scale deployment --replicas 2 oradb
+```
+
+- List the Pods.
+
+```
+kubectl get pods
+```
+
+Two pods (prefixed oradb) get listed for Oracle Database. 
 
 Run the preceding command after a few seconds, multiple times if required, to list the two Pods as STATUS->Running and READY->(1/1).
 
@@ -52,13 +64,13 @@ Detailed information about the Pod such as name, namespace, Docker image, node, 
 
 - Create a Kubernetes service
 
-Creating a **replication controller does not by itself create a Docker service**. Expose the replication controller oradb as a Kubernetes service on port 1521.
+Expose the deployment oradb as a Kubernetes service on port 1521.
 
 ```
-kubectl expose rc oradb --port=1521 --type=LoadBalancer
+kubectl expose deployment oradb --type=LoadBalancer --name=oradb --port=1521
 ```
 
-The oradb service gets created. The service selector is run=oradb, which is the same as the replication controller selector.
+The oradb service gets created. 
 
 - List the Kubernetes services.
 
@@ -104,16 +116,16 @@ kubectl describe svc oradb
 /*Only one endpoint gets listed.*/
 
 
-### Deleting the Replication Controller and Service
+### Deleting the Deployment and Service
 
-In subsequent sections we shall create a cluster of Oracle Database instances **declaratively** using definition files. **As we shall be using the same configuration parameters, delete the oradb replication controller and the oradb service**.
+In subsequent sections we shall create a cluster of Oracle Database instances **declaratively** using definition files. **As we shall be using the same configuration parameters, delete the oradb deployment and the oradb service**.
 
 ```
-kubectl delete rc oradb
+kubectl delete deployment oradb
 kubectl delete svc oradb
 ```
 
-Both the replication controller and the service get deleted.
+Both the deployment and the service get deleted.
 
 If the kubectl get services command is run again the oradb service does not get listed.
 
@@ -180,18 +192,18 @@ The Pod description gets listed.
  The service definition file specifies a port to expose the service at, a label for the service and a selector to match the Pods to be managed by the service. The selector setting of app: ”oradb” translates to service selector app=oradb. Copy the following listing to the oradb-service.yaml file.
 
 ```
-apiVersion: v1
 kind: Service
+apiVersion: v1
 metadata:
-name: "oradb"
-labels:
-app: "oradb"
+  name: oradb
+  labels:
+    app: oradb
 spec:
-ports:
--
-port: 1521
-selector:
-app: "oradb"
+  selector:
+    app: oradb
+  ports:
+  - protocol: TCP
+    port: 1521
 ```
 
 Run the kubectl create command to create a service.
@@ -218,48 +230,50 @@ The service description does not include any service endpoints because the servi
 The service selector app=oradb has to match a Pod label for the service to be able to manage the Pod.
 
 
-- Creating a Replication Controller
+- Creating a Deployment
 
-Next, we shall create a replication controller with a matching label. The replication controller definition file called oradb-rc.yaml defines a replication controller. **For the replication controller to manage the Pods defined in the spec field the key:value expression of the selector in the replication controller has to match a label in the Pod template mapping.** The selector defaults to the same setting as the spec->template->metadata->labels. The template->spec->containers mapping defines the containers in the Pod with only the Oracle Database container "sath89/oracle-12c" defined.
+Next, we shall create a deployment with a matching label. The deployment definition file called oradb-deployment.yaml defines a deployment. **For the replication controller to manage the Pods defined in the spec field the key:value expression of the selector in the replication controller has to match a label in the Pod template mapping.** The selector defaults to the same setting as the spec->template->metadata->labels. The template->spec->containers mapping defines the containers in the Pod with only the Oracle Database container "sath89/oracle-12c" defined.
 
 ```
-apiVersion: v1
-kind: ReplicationController
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-name: "oradb"
-labels:
-app: "oradb"
+  name: oradb
 spec:
-replicas: 2
-template:
-metadata:
-labels:
-app: "oradb"
-spec:
-containers:
--
-image: "sath89/oracle-12c"
-name: "oradb"
+  selector:
+    matchLabels:
+      run: oradb
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        run: oradb
+    spec:
+      containers:
+      - name: oradb
+        image: sath89/oracle-12c
+        ports:
+        - containerPort: 1521
 ```
 
-Next, run the kubectl create command to create a replication controller from the definition file oradb-rc.yaml.
+Next, run the kubectl create command to create a deployment from the definition file oradb-deployment.yaml.
 
 ```
-kubectl create -f oradb-rc.yaml
+kubectl create -f oradb-deployment.yaml
 ```
 
-The replication controller gets created. List the replication controller.
+The deployment gets created. List the deployment.
 ```
-kubectl get rc
+kubectl get deployments
 ```
-The oradb replication controller gets created.
-List the Pods created by the replication controller.
+The oradb deployment gets created.
+List the Pods created by the deployment.
 
 ```
 kubectl get pods
 ```
 
-Three Oracle Database Pods get listed. Because the Pod oradb, which is started using the Pod definition file oradb.yaml does not include a label that matches the selector in the replication controller, two new replicas are started by the replication controller.
+Two Oracle Database Pods get listed. Because the Pod oradb, which is started using the Pod definition file oradb.yaml does not include a label that matches the selector in the deployment, two new replicas are started by the deployment.
 
 Describe the service oradb with the following command.
 ```
