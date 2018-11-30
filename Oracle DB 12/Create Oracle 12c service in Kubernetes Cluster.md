@@ -1,14 +1,14 @@
 
 # Create Oracle Database cluster in Kubernetes
 ## Creating an Oracle Database Instance Imperatively (without configuration files)
-### Image from Docker Hub
+### Image from Oracle Container Registry
 
-https://hub.docker.com/r/sath89/oracle-12c/
+https://bit.ly/2SlL6nk
 
-- Create an Oracle Database cluster consisting of 2 replicas with container port set as 1521.
+- Create an Oracle Database deployment called oradb using the official Oracle Database docker image of Oracle Container Registry.
 
 ```
-kubectl create deployment --image=sath89/oracle-12c oradb
+kubectl create deployment --image=container-registry.oracle.com/database/enterprise:12.2.0.1 oradb
 ```
 
 A deployment called oradb gets created.
@@ -142,7 +142,7 @@ Create definition files oradb-rc.yaml, oradb-service.yaml, and oradb.yaml as lis
 oradb.yaml
 
 The Pod definition file defines a Pod named “oradb” with a label setting name: “oradb”
-which translates to Pod label name=oradb. The container image is set as “sath89/oracle-12c” and the container port is set as 1521.
+which translates to Pod label name=oradb. The container image is set as “container-registry.oracle.com/database/enterprise:12.2.0.1” and the container port is set as 1521.
 
 ```
 apiVersion: v1
@@ -154,7 +154,7 @@ name: “oradb”
 spec:
 containers:
 -
-image: “sath89/oracle-12c”
+image: “container-registry.oracle.com/database/enterprise:12.2.0.1”
 name: “oradb”
 ports:
 -
@@ -251,7 +251,7 @@ spec:
     spec:
       containers:
       - name: oradb
-        image: sath89/oracle-12c
+        image: container-registry.oracle.com/database/enterprise:12.2.0.1
         ports:
         - containerPort: 1521
 ```
@@ -319,9 +319,9 @@ Next, we shall **start an interactive tty (shell) to connect to the software**, 
 sudo docker ps
 ```
 
-Docker containers listed include those created from the sath89/oracle-12c Docker image.
+Docker containers listed include those created from the container-registry.oracle.com/database/enterprise:12.2.0.1 Docker image.
 
-Copy the container id for one of the Docker containers for the sath89/oracle-12c image and start a bash shell.
+Copy the container id for one of the Docker containers for the container-registry.oracle.com/database/enterprise:12.2.0.1 image and start a bash shell.
 
 ```
 sudo docker exec -it c53ed6fcddf3 bash
